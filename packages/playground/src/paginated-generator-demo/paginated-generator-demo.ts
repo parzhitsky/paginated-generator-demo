@@ -79,6 +79,8 @@ export class PaginatedGeneratorDemo<Item> extends InteractiveCLI {
   }
 
   protected override async afterStart(): Promise<void> {
+    this.outConsole.log('Use ⬅️ and ➡️ arrows to change pages. Press Ctrl+C to exit.')
+
     await this.showCurrentPage()
   }
 }
