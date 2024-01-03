@@ -111,7 +111,7 @@ export class PaginatedGenerator<out Item> {
       items,
       pagination: {
         ...queryValid,
-        totalCount: items.length,
+        totalCount: NaN, // there's no way to know that
       },
     }
   }
