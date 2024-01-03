@@ -1,5 +1,6 @@
 import { InteractiveCLI, type Key } from '@/interactive-cli/interactive-cli.js'
-import { type PageQuery, PaginatedGenerator } from '@/paginated-generator/paginated-generator.js'
+import { type PageQuery } from '@/paginated-generator/page-query.type.js'
+import { PaginatedGenerator } from '@/paginated-generator/paginated-generator.js'
 
 interface PaginatedGeneratorDemoParams {
   readonly pageSize: number
