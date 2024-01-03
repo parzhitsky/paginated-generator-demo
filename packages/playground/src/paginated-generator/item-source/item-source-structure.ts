@@ -2,6 +2,7 @@ import { ItemSource } from './item-source.abstract.js'
 
 export interface IndexToItemMap<out Item> {
   readonly [index: number]: Item
+  readonly length?: number
 }
 
 export class ItemSourceStructure<out Item> extends ItemSource<Item> {
@@ -11,5 +12,9 @@ export class ItemSourceStructure<out Item> extends ItemSource<Item> {
 
   getItemByIndex(index: number): Item | undefined {
     return this.indexToItemMap[index]
+  }
+
+  override getTotalCount(): number {
+    return this.indexToItemMap.length ?? NaN
   }
 }

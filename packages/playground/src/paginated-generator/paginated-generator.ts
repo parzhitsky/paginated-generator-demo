@@ -22,6 +22,8 @@ export class PaginatedGenerator<out Item> {
   protected readonly itemSource: ItemSource<Item>
   protected readonly pageItemsGetter: PageItemsGetter<Item>
 
+  public readonly totalCount: number
+
   constructor(itemSourceRaw: ItemSourceRaw<Item>, {
     defaultLimit = new.target.DEFAULT_DEFAULT_LIMIT,
     defaultOffset = new.target.DEFAULT_DEFAULT_OFFSET,
@@ -37,6 +39,8 @@ export class PaginatedGenerator<out Item> {
     } else {
       this.pageItemsGetter = new PageItemsGetterParallel(this.itemSource)
     }
+
+    this.totalCount = this.itemSource.getTotalCount()
   }
 
   validatePageQuery(query: PageQuery): Required<PageQuery> {
@@ -53,7 +57,7 @@ export class PaginatedGenerator<out Item> {
       items,
       pagination: {
         ...queryValid,
-        totalCount: NaN, // there's no way to know that
+        totalCount: this.totalCount,
       },
     }
   }
