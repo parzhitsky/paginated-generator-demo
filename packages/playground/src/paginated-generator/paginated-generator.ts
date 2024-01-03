@@ -70,7 +70,7 @@ export class PaginatedGenerator<out Item> {
     return items
   }
 
-  public validatePageQuery(query: PageQuery): Required<PageQuery> {
+  validatePageQuery(query: PageQuery): Required<PageQuery> {
     const queryValid = this.pageQueryValidator.validate(query)
 
     return queryValid
