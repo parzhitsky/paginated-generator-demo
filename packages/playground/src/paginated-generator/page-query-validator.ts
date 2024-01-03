@@ -16,18 +16,22 @@ export class PageQueryValidator {
     this.defaultOffset = params.defaultOffset
   }
 
-  validate(query: PageQuery): Required<PageQuery> {
-    const limit = query.limit ?? this.defaultLimit
+  protected validateLimit(limit: number | undefined): number {
+    const limitValid = limit ?? this.defaultLimit
 
-    if (limit < 1) {
-      throw new PageQueryInvalidError('limit cannot be less than 1', limit)
+    if (limitValid < 1) {
+      throw new PageQueryInvalidError('limit cannot be less than 1', limitValid)
     }
 
-    if (limit % 1 !== 0) {
-      throw new PageQueryInvalidError('limit must be an integer', limit)
+    if (limitValid % 1 !== 0) {
+      throw new PageQueryInvalidError('limit must be an integer', limitValid)
     }
 
-    const offset = query.offset ?? this.defaultOffset
+    return limitValid
+  }
+
+  protected validateOffset(offsetInput: number | undefined): number {
+    const offset = offsetInput ?? this.defaultOffset
 
     if (offset < 0) {
       throw new PageQueryInvalidError('offset cannot be less than 0', offset)
@@ -36,6 +40,13 @@ export class PageQueryValidator {
     if (offset % 1 !== 0) {
       throw new PageQueryInvalidError('offset must be an integer', offset)
     }
+
+    return offset
+  }
+
+  validate(query: PageQuery): Required<PageQuery> {
+    const limit = this.validateLimit(query.limit)
+    const offset = this.validateOffset(query.offset)
 
     return {
       limit,
