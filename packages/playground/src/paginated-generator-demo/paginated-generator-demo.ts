@@ -8,6 +8,7 @@ interface PaginatedGeneratorDemoParams {
 
 export class PaginatedGeneratorDemo<Item> extends InteractiveCLI {
   protected readonly outConsole = new console.Console(this.output)
+  protected readonly maxOffset: number
   protected currentPageQuery: Required<PageQuery>
 
   constructor(protected readonly generator: PaginatedGenerator<Item>, { pageSize }: PaginatedGeneratorDemoParams) {
@@ -16,6 +17,14 @@ export class PaginatedGeneratorDemo<Item> extends InteractiveCLI {
     this.currentPageQuery = {
       offset: 0,
       limit: pageSize,
+    }
+
+    const totalCount = this.generator.totalCount
+
+    if (Number.isNaN(totalCount)) {
+      this.maxOffset = Infinity
+    } else {
+      this.maxOffset = totalCount - (totalCount % pageSize)
     }
   }
 
@@ -32,7 +41,7 @@ export class PaginatedGeneratorDemo<Item> extends InteractiveCLI {
     const { offset, limit } = this.currentPageQuery
 
     return {
-      offset: offset + limit,
+      offset: Math.min(offset + limit, this.maxOffset),
       limit,
     }
   }
