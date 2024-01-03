@@ -1,21 +1,14 @@
 import { type ListPaginated } from '@@shared/pagination/list-paginated.type.js'
+import { createItemSource, type ItemSourceRaw, type ItemSource } from './item-source/create-item-source.js'
 import { type PageQuery } from './page-query.type.js'
+import { type PageItemsGetter } from './page-items-getter.abstract.js'
+import { PageItemsGetterParallel } from './page-items-getter-parallel.js'
+import { PageItemsGetterSequential } from './page-items-getter-sequential.js'
 import { PageQueryValidator } from './page-query-validator.js'
-
-interface ItemSourceAlgorithm<out Item> {
-  (this: unknown, index: number): Item | PromiseLike<Item>
-}
-
-interface ItemSourceStructure<out Item> {
-  readonly [index: number]: Item
-}
-
-type ItemSource<Item> = ItemSourceAlgorithm<Item> | ItemSourceStructure<Item>
 
 interface PaginatedGeneratorParams {
   readonly defaultLimit?: number
   readonly defaultOffset?: number
-  /** Only has effect when item source is a function */
   readonly disallowParallelItemSourceInvocation?: boolean
 }
 
@@ -25,49 +18,25 @@ export class PaginatedGenerator<out Item> {
 
   protected readonly defaultLimit: number
   protected readonly defaultOffset: number
-  protected readonly disallowParallelItemSourceInvocation: boolean
   protected readonly pageQueryValidator: PageQueryValidator
+  protected readonly itemSource: ItemSource<Item>
+  protected readonly pageItemsGetter: PageItemsGetter<Item>
 
-  constructor(protected readonly itemSource: ItemSource<Item>, {
+  constructor(itemSourceRaw: ItemSourceRaw<Item>, {
     defaultLimit = new.target.DEFAULT_DEFAULT_LIMIT,
     defaultOffset = new.target.DEFAULT_DEFAULT_OFFSET,
     disallowParallelItemSourceInvocation = false,
   }: PaginatedGeneratorParams = {}) {
     this.defaultLimit = defaultLimit
     this.defaultOffset = defaultOffset
-    this.disallowParallelItemSourceInvocation = disallowParallelItemSourceInvocation
     this.pageQueryValidator = new PageQueryValidator({ defaultLimit, defaultOffset })
-  }
+    this.itemSource = createItemSource(itemSourceRaw)
 
-  protected async getItemByIndex(index: number): Promise<Item | undefined> {
-    let item: Item | undefined
-
-    if (this.itemSource instanceof Function) {
-      item = await this.itemSource(index)
+    if (disallowParallelItemSourceInvocation) {
+      this.pageItemsGetter = new PageItemsGetterSequential(this.itemSource)
     } else {
-      item = this.itemSource[index]
+      this.pageItemsGetter = new PageItemsGetterParallel(this.itemSource)
     }
-
-    return item
-  }
-
-  protected async getPageItemsParallel({ limit, offset }: Required<PageQuery>): Promise<Array<Item | undefined>> {
-    const indexes = Array.from({ length: limit }, (_, index) => index + offset)
-    const items = await Promise.all(indexes.map(this.getItemByIndex.bind(this)))
-
-    return items
-  }
-
-  protected async getPageItemsSequential({ limit, offset }: Required<PageQuery>): Promise<Array<Item | undefined>> {
-    const items: Array<Item | undefined> = []
-
-    for (let index = offset; index < limit + offset; index += 1) {
-      const item = await this.getItemByIndex(index)
-
-      items.push(item)
-    }
-
-    return items
   }
 
   validatePageQuery(query: PageQuery): Required<PageQuery> {
@@ -78,14 +47,7 @@ export class PaginatedGenerator<out Item> {
 
   async getPage(query: PageQuery): Promise<ListPaginated<Item | undefined>> {
     const queryValid = this.validatePageQuery(query)
-
-    let items: Array<Item | undefined>
-
-    if (this.disallowParallelItemSourceInvocation && this.itemSource instanceof Function) {
-      items = await this.getPageItemsSequential(queryValid)
-    } else {
-      items = await this.getPageItemsParallel(queryValid)
-    }
+    const items = await this.pageItemsGetter.getPageItems(queryValid)
 
     return {
       items,
